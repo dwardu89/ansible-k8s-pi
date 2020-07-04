@@ -1,0 +1,59 @@
+---
+- name: Initial Setup to create ubuntu user
+  hosts: all
+  become: yes
+  
+  roles:
+    - ubuntu_user
+    - docker
+    - firewall
+    - kubernetes_install
+
+  tasks:
+    - name: Set Hostname to inventory_hostname
+      hostname:
+        name: "{{ inventory_hostname }}"
+    - name: Copy the usercfg.txt
+      copy:
+        src: files/boot/firmware/usercfg.txt
+        dest: /boot/firmware/usercfg.txt
+    - name: Copy the cmdline.txt
+      copy:
+        src: files/boot/firmware/cmdline.txt
+        dest: /boot/firmware/cmdline.txt
+
+- name: Set up master
+  hosts: masters
+  become: yes
+
+  roles:
+    - role: firewall
+      ports:
+        - '22'
+        - '6443'
+        - '2379:2380'
+        - '10250:10252'
+    - role: kubernetes_single_control_plane
+      ip_address: "192.168.1.50"
+
+  tasks:
+    - name: get join command
+      shell: kubeadm token create --print-join-command
+      register: join_command_raw
+
+    - name: set join command
+      set_fact:
+        join_command: "{{ join_command_raw.stdout_lines[0] }}"
+
+- name: Set up workers
+  hosts: workers
+  become: yes
+
+  roles:
+    - role: firewall
+      ports:
+        - '22'
+        - '10250'
+        - '30000:32767'
+    - role: kubernetes_node_join
+      join_command: "{{ hostvars['master'].join_command }}"

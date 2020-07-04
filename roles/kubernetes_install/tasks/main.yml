@@ -1,0 +1,82 @@
+---
+- name: Ensure overlay
+  modprobe:
+    name: overlay
+    state: present
+
+- name: Ensure br_netfilter
+  modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Check if 99-k8s.conf exists
+  stat:
+    path: "/etc/sysctl.d/99-k8s.conf"
+  register: k8s_conf
+
+- name: Copy kubernetes cri conf
+  copy:
+    src: files/etc/sysctl.d/99-k8s.conf
+    dest: /etc/sysctl.d/99-k8s.conf
+    mode: 0644
+  when: not k8s_conf.stat.exists
+
+- name: Add Google GPG Key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add the Kubernetes apt repository
+  apt_repository:
+    repo: "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+
+- name: Update apt cache if needed.
+  apt:
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Installing kubeadm, kubelet and kubectl
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+  register: kubernetes_installed
+
+- name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
+  shell: |
+    swapoff -a
+  when: kubernetes_installed is changed
+
+- name: Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  when: kubernetes_installed is changed
+
+- name: Ensure kubelet directory exists
+  file:
+    state: directory
+    path: /var/lib/kubelet
+
+- name: Check if kubelet.conf exists
+  stat:
+    path: "/var/lib/kubelet/config.yaml"
+  register: kubelet_conf
+
+- name: Copy kubelet config file
+  copy:
+    src: files/var/lib/kubelet/config.yaml
+    dest: /var/lib/kubelet/config.yaml
+    mode: 0644
+  when: not kubelet_conf.stat.exists
+  notify: restart kubelet
+
+- name: Set up the kubelet daemon service
+  systemd:
+    state: started
+    name: kubelet
+    enabled: yes

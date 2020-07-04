@@ -1,0 +1,16 @@
+---
+- name: Allow SSH
+  ufw:
+    port: ssh
+    rule: allow
+- name: Allow port
+  ufw:
+    port: "{{ item }}"
+    rule: allow
+    proto: tcp
+  with_items: "{{ ports }}"
+  notify: restart ufw
+- name: Enable ufw
+  ufw:
+    state: enabled
+    

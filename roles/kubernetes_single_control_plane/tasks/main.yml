@@ -1,0 +1,43 @@
+---
+- name: "Check required variables"
+  fail: 
+    msg: "Variable '{{ item }}' is not defined"
+  when: item not in vars
+  with_items: "{{required_vars}}"
+
+- name: Check if kubeconfig exists
+  stat:
+    path: "/home/{{ user }}/.kube/config"
+  register: kubeconfig
+- name: initialize the cluster
+  shell: kubeadm init --apiserver-advertise-address={{ ip_address }} --apiserver-cert-extra-sans={{ ip_address }} --node-name master --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
+  args:
+    chdir: $HOME
+    creates: cluster_initialized.txt
+  when: not kubeconfig.stat.exists
+
+- name: create .kube directory
+  become: yes
+  become_user: "{{ user }}"
+  file:
+    path: "/home/{{ user }}/.kube"
+    state: directory
+    mode: "0755"
+  when: not kubeconfig.stat.exists
+
+- name: copy admin.conf to user's kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ user }}/.kube/config"
+    remote_src: yes
+    owner: ubuntu
+  when: not kubeconfig.stat.exists
+
+- name: install Pod network
+  become: yes
+  become_user: "{{ user }}"
+  shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> pod_network_setup.txt
+  args:
+    chdir: "/home/{{ user }}"
+    creates: pod_network_setup.txt
+  when: not kubeconfig.stat.exists

@@ -1,0 +1,17 @@
+---
+- name: "Check required variables"
+  fail: 
+    msg: "Variable '{{ item }}' is not defined"
+  when: item not in vars
+  with_items: "{{required_vars}}"
+- name: Check if kubelet.conf exists
+  stat:
+    path: "/etc/kubernetes/kubelet.conf"
+  register: kubelet_conf
+
+- name: join cluster
+  shell: "{{ join_command }} >> node_joined.txt"
+  args:
+    chdir: $HOME
+    creates: node_joined.txt
+  when: not kubelet_conf.stat.exists

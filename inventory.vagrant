@@ -1,0 +1,23 @@
+[masters]
+master ansible_host=192.168.60.4
+
+[workers]
+node1 ansible_host=192.168.60.5
+node2 ansible_host=192.168.60.6
+node3 ansible_host=192.168.60.7
+node4 ansible_host=192.168.60.8
+
+# Group has all the Servers
+[all:children]
+masters
+workers
+
+# Variables for all the Servers
+[masters:vars]
+ansible_ssh_user=vagrant
+ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_key
+
+# Variables for all the Servers
+[workers:vars]
+ansible_ssh_user=vagrant
+ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_key

@@ -1,0 +1,3 @@
+join_command: "ubuntu"
+required_vars:
+  - join_command
