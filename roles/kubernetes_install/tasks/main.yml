@@ -19,7 +19,6 @@
     src: files/etc/sysctl.d/99-k8s.conf
     dest: /etc/sysctl.d/99-k8s.conf
     mode: 0644
-  when: not k8s_conf.stat.exists
 
 - name: Add Google GPG Key
   apt_key:
@@ -66,6 +65,13 @@
   stat:
     path: "/var/lib/kubelet/config.yaml"
   register: kubelet_conf
+
+- name: Ensure the right resolv.conf
+  lineinfile:
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    line: 'Environment="--resolv-conf=/run/systemd/resolve/resolv.conf"'
+    state: present
+  notify: restart kubelet
 
 - name: Copy kubelet config file
   copy:

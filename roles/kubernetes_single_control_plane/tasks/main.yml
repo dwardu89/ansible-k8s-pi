@@ -33,11 +33,24 @@
     owner: ubuntu
   when: not kubeconfig.stat.exists
 
+- name: copy calico.yaml to user's kube config
+  copy:
+    src: files/calico.yaml
+    dest: "/home/{{ user }}/calico.yaml"
+    owner: ubuntu
+
 - name: install Pod network
   become: yes
   become_user: "{{ user }}"
-  shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> pod_network_setup.txt
+  shell: kubectl apply -f "/home/{{ user }}/calico.yaml" > pod_network_setup.txt
   args:
     chdir: "/home/{{ user }}"
     creates: pod_network_setup.txt
-  when: not kubeconfig.stat.exists
+
+- name: untaint the kubernetes master node
+  become: yes
+  become_user: "{{ user }}"
+  shell: kubectl taint nodes --all node-role.kubernetes.io/master- > master_untainted.txt
+  args:
+    chdir: "/home/{{ user }}"
+    creates: master_untainted.txt

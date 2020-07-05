@@ -30,6 +30,7 @@
     - role: firewall
       ports:
         - '22'
+        - '179'
         - '6443'
         - '2379:2380'
         - '10250:10252'
@@ -53,6 +54,7 @@
     - role: firewall
       ports:
         - '22'
+        - '179'
         - '10250'
         - '30000:32767'
     - role: kubernetes_node_join

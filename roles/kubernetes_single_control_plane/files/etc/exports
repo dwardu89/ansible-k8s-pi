@@ -1,1 +1,0 @@
-/data/kubernetes-storage/ 192.168.1.*(rw,sync,no_subtree_check,no_root_squash)
