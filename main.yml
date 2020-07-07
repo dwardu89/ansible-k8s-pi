@@ -8,6 +8,7 @@
     - docker
     - firewall
     - kubernetes_install
+    - nfs
 
   tasks:
     - name: Set Hostname to inventory_hostname
@@ -27,12 +28,25 @@
   become: yes
 
   roles:
+    - role: nfs_server
+      user: "ubuntu"
+      path: "/media/HDD"
     - role: firewall
       ports:
         - '22'
-        - '179'
-        - '6443'
-        - '2379:2380'
+        # There might be some big mistake with this for nfs.
+        - '111' # nfs
+        - '2049' # nfs
+        - '33333' # nfs
+        - '40992' # nfs
+        - '51461' # nfs
+        - '54623' # nfs
+        - '56785' # nfs
+        - '35996' # nfs
+        - '41205' # nfs
+        - '179' # BGP
+        - '6443' # k8s
+        - '2379:2380' # k8s
         - '10250:10252'
     - role: kubernetes_single_control_plane
       ip_address: "192.168.1.50"

@@ -1,0 +1,41 @@
+---
+- name: Update apt cache if needed
+  apt:
+    update_cache: true
+    cache_valid_time: 86400
+- name: Ensure NFS Tools installed
+  apt:
+    name:
+      - nfs-kernel-server
+    state: present
+- name: Change file ownership, group and permissions
+  file:
+    path: "{{ path }}"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: "755"
+
+- name: Get Group ID of user
+  shell: "id {{ user }} -g"
+  register: user_group_id_raw
+- name: Set User ID of user
+  set_fact:
+    user_group_id: "{{ user_group_id_raw.stdout_lines[0] }}"
+
+- name: Get User ID of user
+  shell: "id {{ user }} -u"
+  register: user_user_id_raw
+- name: Set User ID of user
+  set_fact:
+    user_user_id: "{{ user_user_id_raw.stdout_lines[0] }}"
+
+- name: Set Exports file
+  lineinfile:
+    path: /etc/exports
+    line: "{{ path }} *(rw,all_squash,insecure,async,no_subtree_check,anonuid={{ user_user_id }},anongid={{ user_group_id }})"
+    create: yes
+  register: exports_file
+
+- name: Run exportfs to update NFS storage
+  shell: "exportfs -ra"
+  when: exports_file is changed

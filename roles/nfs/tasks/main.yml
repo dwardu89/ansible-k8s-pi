@@ -1,0 +1,10 @@
+---
+- name: Update apt cache if needed
+  apt:
+    update_cache: true
+    cache_valid_time: 86400
+- name: Ensure NFS Tools installed
+  apt:
+    name:
+      - nfs-common
+    state: present
