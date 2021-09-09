@@ -25,35 +25,58 @@
       - gnupg2
     state: present
 
-
-- name: Install Docker CE
-  apt:
-    name:
-      - containerd.io=1.2.13-2
-      - docker-ce=5:19.03.12~3-0~ubuntu-{{ ansible_facts['lsb']['codename'] }}
-      - docker-ce-cli=5:19.03.12~3-0~ubuntu-{{ ansible_facts['lsb']['codename'] }}
+- name: Load overlay module
+  community.general.modprobe:
+    name: overlay
     state: present
-  register: docker_installed
 
-- name: Hold Docker CE APT Packages
-  shell: apt-mark hold containerd.io docker-ce docker-ce-cli
-  when: docker_installed is changed
+- name: Load br_netfilter module
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
 
-- name: Copy file for Docker daemon
+- name: Copy containerd.conf file
   copy:
-    src: files/etc/docker/daemon.json
-    dest: /etc/docker/daemon.json
+    src: files/etc/modules-load.d/containerd.conf
+    dest: /etc/modules-load.d/containerd.conf
     mode: 0644
 
-- name: Create docker daemon folder
-  file:
-    path: /etc/systemd/system/docker.service.d
-    state: directory
-  notify: restart docker
+- name: Copy 99-kubernetes-cri.conf file
+  copy:
+    src: files/etc/sysctl.d/99-kubernetes-cri.conf
+    dest: /etc/sysctl.d/99-kubernetes-cri.conf
+    mode: 0644
+  register: kubernetes_cri_conf
 
-- name: Set up the docker daemon service
+- name: Apply sysctl params without reboot
+  shell: sudo sysctl --system
+  when: kubernetes_cri_conf is changed
+
+- name: Create containerd folder
+  file:
+    path: /etc/containerd
+    state: directory
+
+- name: Install containerd
+  apt:
+    name:
+      - containerd
+    state: present
+  register: containerd_installed
+
+- name: Hold containerd APT Packages
+  shell: apt-mark hold containerd
+  when: containerd_installed is changed
+
+- name: Copy ontainerd config file
+  copy:
+    src: files/etc/containerd/config.toml
+    dest: /etc/containerd/config.toml
+    mode: 0644
+
+- name: Set up the containerd service
   systemd:
     state: started
     masked: no
-    name: docker
+    name: containerd
     enabled: yes

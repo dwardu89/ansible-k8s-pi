@@ -9,14 +9,20 @@
   stat:
     path: "/home/{{ user }}/.kube/config"
   register: kubeconfig
+
+- name: output
+  debug:
+    msg: kubeadm init --apiserver-advertise-address={{ ip_address }} --apiserver-cert-extra-sans={{ ip_address }} --node-name master --pod-network-cidr=10.244.0.0/16
+
 - name: initialize the cluster
+  become: yes
   shell: kubeadm init --apiserver-advertise-address={{ ip_address }} --apiserver-cert-extra-sans={{ ip_address }} --node-name master --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
   args:
     chdir: $HOME
     creates: cluster_initialized.txt
   when: not kubeconfig.stat.exists
 
-- name: create .kube directory
+- name: Create .kube directory
   become: yes
   become_user: "{{ user }}"
   file:
