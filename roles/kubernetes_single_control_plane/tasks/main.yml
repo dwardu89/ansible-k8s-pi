@@ -39,16 +39,16 @@
     owner: ubuntu
   when: not kubeconfig.stat.exists
 
-- name: copy calico.yaml to user's kube config
+- name: copy canal.yaml to user's kube config
   copy:
-    src: files/calico.yaml
-    dest: "/home/{{ user }}/calico.yaml"
+    src: files/canal.yaml
+    dest: "/home/{{ user }}/canal.yaml"
     owner: ubuntu
 
-- name: install Pod network
+- name: install Calico for policy and flannel (aka Canal) for networking
   become: yes
   become_user: "{{ user }}"
-  shell: kubectl apply -f "/home/{{ user }}/calico.yaml" > pod_network_setup.txt
+  shell: kubectl apply -f "/home/{{ user }}/canal.yaml" > pod_network_setup.txt
   args:
     chdir: "/home/{{ user }}"
     creates: pod_network_setup.txt

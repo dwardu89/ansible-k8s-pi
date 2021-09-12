@@ -50,9 +50,9 @@
         - '35996' # nfs
         - '41205' # nfs
         - '179' # BGP
-        - '6443' # k8s
-        - '2379:2380' # k8s
-        - '10250:10252'
+        - '6443' # k8s 
+        - '2379:2380' # k8s etcd server client API
+        - '10250:10252' # kubelet API, kube-scheduler, kube-controller-manager
     - role: kubernetes_single_control_plane
       ip_address: "192.168.60.4"
       user: vagrant
