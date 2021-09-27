@@ -1,0 +1,32 @@
+---
+    - name: Create firmware folder
+      file:
+        path: /boot/firmware
+        state: directory
+    - name: Set Hostname to inventory_hostname
+      hostname:
+        name: "{{ inventory_hostname }}"
+    - name: Copy the usercfg.txt
+      copy:
+        src: files/boot/firmware/usercfg.txt
+        dest: /boot/firmware/usercfg.txt
+      register: update_usercfg
+    - name: Update the cmdline.txt
+      copy:
+        src: files/boot/firmware/cmdline.txt
+        dest: /boot/firmware/cmdline.txt
+      register: update_cmdline
+
+    - name: Reboot immediately if there was a change.
+      shell: "sleep 5 && reboot"
+      async: 1
+      poll: 0
+      when: update_usercfg is changed or update_cmdline is changed
+
+    - name: Wait for the reboot to complete if there was a change.
+      wait_for_connection:
+        connect_timeout: 20
+        sleep: 5
+        delay: 5
+        timeout: 300
+      when: update_usercfg is changed or update_cmdline is changed

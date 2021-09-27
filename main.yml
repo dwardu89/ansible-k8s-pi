@@ -4,42 +4,25 @@
   become: yes
   
   roles:
+    - kubernetes_raspberry_pi_poe
     - ubuntu_user
-    - docker
+    - containerd
     - firewall
     - kubernetes_install
     - nfs
-
-  tasks:
-
-    - name: Create firmware folder
-      file:
-        path: /boot/firmware
-        state: directory
-    - name: Set Hostname to inventory_hostname
-      hostname:
-        name: "{{ inventory_hostname }}"
-    - name: Copy the usercfg.txt
-      copy:
-        src: files/boot/firmware/usercfg.txt
-        dest: /boot/firmware/usercfg.txt
-    - name: Copy the cmdline.txt
-      copy:
-        src: files/boot/firmware/cmdline.txt
-        dest: /boot/firmware/cmdline.txt
 
 - name: Set up master
   hosts: masters
   become: yes
 
   roles:
-    # - role: nfs_server
-    #   user: "ubuntu"
-    #   path: "/media/HDD"
+    - role: nfs_server
+      user: "ubuntu"
+      path: "/media/HDD"
     - role: firewall
       ports:
         - '22'
-        # There might be some big mistake with this for nfs.
+        # # There might be some big mistake with this for nfs.
         - '111' # nfs
         - '2049' # nfs
         - '33333' # nfs
@@ -50,12 +33,13 @@
         - '35996' # nfs
         - '41205' # nfs
         - '179' # BGP
+        - '7946'
         - '6443' # k8s 
         - '2379:2380' # k8s etcd server client API
         - '10250:10252' # kubelet API, kube-scheduler, kube-controller-manager
     - role: kubernetes_single_control_plane
-      ip_address: "192.168.60.4"
-      user: vagrant
+      ip_address: "192.168.1.50"
+      user: ubuntu
 
   tasks:
     - name: get join command
@@ -75,7 +59,20 @@
       ports:
         - '22'
         - '179'
+        - '7946'
         - '10250'
         - '30000:32767'
     - role: kubernetes_node_join
       join_command: "{{ hostvars['master'].join_command }}"
+  tasks:
+    - name: Update apt cache if needed
+      apt:
+        update_cache: true
+        upgrade: safe
+        cache_valid_time: 86400
+
+    - name: Ensure NFS Tools installed
+      apt:
+        name:
+          - nfs-client
+        state: present
